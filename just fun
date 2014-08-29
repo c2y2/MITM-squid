@@ -1,0 +1,109 @@
+ 
+ from:http://www.ex-parrot.com/pete/upside-down-ternet.html
+ Mythic Beasts, shell accounts, cvs hosting, co-location, virtual servers
+Upside-Down-Ternet
+
+My neighbours are stealing my wireless internet access. I could encrypt it or alternately I could have fun.
+Split the network
+
+I'm starting here by splitting the network into two parts, the trusted half and the untrusted half. The trusted half has one netblock, the untrusted a different netblock. We use the DHCP server to identify mac addresses to give out the relevant addresses.
+/etc/dhcpd.conf
+
+ddns-updates off;
+ddns-update-style interim;
+authoritative;
+
+shared-network local {
+
+        subnet *.*.*.* netmask 255.255.255.0 {
+                range *.*.*.* *.*.*.*;
+                option routers *.*.*.*;
+                option subnet-mask 255.255.255.0;
+                option domain-name "XXXXX";
+                option domain-name-servers *.*.*.*;
+                deny unknown-clients;
+
+                host trusted1 {
+                        hardware ethernet *:*:*:*:*:*;
+                        fixed-address *.*.*.*;
+                }
+		}
+
+        subnet 192.168.0.0 netmask 255.255.255.0 {
+                range 192.168.0.2 192.168.0.10;
+                option routers 192.168.0.1;
+                option subnet-mask 255.255.255.0;
+                option domain-name-servers 192.168.0.1;
+                allow unknown-clients;
+
+        }
+}
+
+IPtables is Fun!
+
+Suddenly everything is kittens! It's kitten net.
+
+/sbin/iptables -A PREROUTING -s 192.168.0.0/255.255.255.0 -p tcp -j DNAT --to-destination 64.111.96.38
+
+For the uninitiated, this redirects all traffic to kittenwar.
+
+For more fun, we set iptables to forward everything to a transparent squid proxy running on port 80 on the machine.
+
+/sbin/iptables -A PREROUTING -s 192.168.0.0/255.255.255.0 -p tcp -m tcp --dport 80 -j DNAT --to-destination 192.168.0.1
+
+That machine runs squid with a trivial redirector that downloads images, uses mogrify to turn them upside down and serves them out of its local webserver.
+The redirection script
+
+#!/usr/bin/perl
+$|=1;
+$count = 0;
+$pid = $$;
+while (<>) {
+        chomp $_;
+        if ($_ =~ /(.*\.jpg)/i) {
+                $url = $1;
+                system("/usr/bin/wget", "-q", "-O","/space/WebPages/images/$pid-$count.jpg", "$url");
+                system("/usr/bin/mogrify", "-flip","/space/WebPages/images/$pid-$count.jpg");
+                print "http://127.0.0.1/images/$pid-$count.jpg\n";
+        }
+        elsif ($_ =~ /(.*\.gif)/i) {
+                $url = $1;
+                system("/usr/bin/wget", "-q", "-O","/space/WebPages/images/$pid-$count.gif", "$url");
+                system("/usr/bin/mogrify", "-flip","/space/WebPages/images/$pid-$count.gif");
+                print "http://127.0.0.1/images/$pid-$count.gif\n";
+
+        }
+        else {
+                print "$_\n";;
+        }
+        $count++;
+}
+
+Then the internet looks like this!
+
+And if you replace flip with -blur 4 you get the blurry-net
+
+I made xkcd - how cool is that ?
+
+Here's an email I received from Fraser at kittenwar,
+
+Hi Pete,
+Apologies for the unsolicited mail, but I thought I'd drop you a line to
+say how much I like your Upside-Down-Ternet advice for confusing wireless
+thieves.
+
+Every so often I receive extremely irate e-mails from people claiming
+that my Kittenwar site is playing host to some kind of nefarious virus
+preventing them from accessing the web, accusing me of practising all
+sorts of dark arts - to which I politely respond that I'm terribly sorry,
+but this only usually happens to people who are using someone else's
+wireless connection, and pointing them in the direction of your site.
+This has happened dozens of times over the last few years, and you know
+what? None of them have ever got back to me after I point this out.
+
+It seems that the kernel.org team also turned their bit of the internet upside down. kernel.org
+
+gotmi1k has redone this page for the Web 2.0 generation and turned the entire technical explanation into a video. They did write some more scripts for messing about with the images and I must confess that the asciiart filter and time machine options are particularly inspired.
+
+A talentless copyright infringing idiot called Varun Chandak plagarised this page without any subtlety at all and gave me the opportunity to send my first ever DMCA takedown notice. It would be awful if this page appeared in Google as the first search result for his name. Being the complete tool that he is he added a tiny attribution just like this one Varun Chandak is a talentless copyrighting infringing idiot which doesn't appear in the Google cache for his page and pretended that the retrospective addition makes it definitely not copyright infringement.
+Home 	Mythic Beasts, shell accounts, cvs hosting, co-location, virtual servers
